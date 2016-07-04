@@ -9621,6 +9621,10 @@ void idle(
   #if HAS_BUZZER && DISABLED(LCD_USE_I2C_BUZZER)
     buzzer.tick();
   #endif
+
+  #if ENABLED(I2C_ENCODERS_ENABLED)
+    i2cEncoderManager.update();
+  #endif
 }
 
 /**
