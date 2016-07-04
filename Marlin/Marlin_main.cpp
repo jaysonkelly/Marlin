@@ -89,6 +89,10 @@
   #include "twibus.h"
 #endif
 
+#if ENABLED(I2C_ENCODERS_ENABLED)
+  #include "i2cEncoder.h"
+#endif
+
 /**
  * Look here for descriptions of G-codes:
  *  - http://linuxcnc.org/handbook/gcode/g-code.html
@@ -629,6 +633,10 @@ static bool send_ok[BUFSIZE];
   #define host_keepalive() ;
   #define KEEPALIVE_STATE(n) ;
 #endif // HOST_KEEPALIVE_FEATURE
+
+#if ENABLED(I2C_ENCODERS_ENABLED)
+  EncoderManager i2cEncoderManager = EncoderManager();
+#endif
 
 #define DEFINE_PGM_READ_ANY(type, reader)       \
   static inline type pgm_read_any(const type *p)  \
@@ -1505,6 +1513,10 @@ static void set_axis_is_at_home(AxisEnum axis) {
       SERIAL_CHAR(')');
       SERIAL_EOL;
     }
+  #endif
+
+  #if ENABLED(I2C_ENCODERS_ENABLED)
+    i2cEncoderManager.homed(axis);
   #endif
 }
 
@@ -7152,6 +7164,47 @@ inline void gcode_M907() {
 
 #endif // MIXING_EXTRUDER
 
+#if ENABLED(I2C_ENCODERS_ENABLED)
+
+  inline void gcode_M860() {
+    bool noOffset, units;
+    AxisEnum selectedAxis;
+
+    if (code_seen('U') || code_seen('u')) {
+      units = true;
+    } else {
+      units = false;
+    }
+
+    if (code_seen('O') || code_seen('o')) {
+      noOffset = true;
+    } else {
+      noOffset = false;
+    }
+
+    for(int i = 0; i < NUM_AXIS; i++) {
+      if (code_seen(axis_codes[i])) {
+        selectedAxis = AxisEnum(i);
+      }
+    }
+
+    i2cEncoderManager.report_position(selectedAxis,units,noOffset);
+  }
+
+  inline void gcode_M861() {
+    AxisEnum selectedAxis;
+
+    for(int i = 0; i < NUM_AXIS; i++) {
+      if (code_seen(axis_codes[i])) {
+        selectedAxis = AxisEnum(i);
+      }
+    }
+
+    i2cEncoderManager.report_status(selectedAxis);
+  }
+
+#endif //I2C_ENCODERS_ENABLED
+
 /**
  * M999: Restart after being stopped
  *
@@ -8202,6 +8255,18 @@ void process_next_command() {
           break;
 
       #endif // HAS_MICROSTEPS
+
+      #if ENABLED(I2C_ENCODERS_ENABLED)
+
+        case 860: // M860 Report encoder module position
+          gcode_M860();
+          break;
+
+        case 861: // M351 Report encoder module status
+          gcode_M861();
+          break;
+
+      #endif // I2C_ENCODERS_ENABLED
 
       case 999: // M999: Restart after being Stopped
         gcode_M999();
@@ -9728,6 +9793,10 @@ void setup() {
 
   #if PIN_EXISTS(STAT_LED_BLUE)
     OUT_WRITE(STAT_LED_BLUE_PIN, LOW); // turn it off
+  #endif
+
+  #if ENABLED(I2C_ENCODERS_ENABLED)
+    i2cEncoderManager.init();
   #endif
 
   lcd_init();
