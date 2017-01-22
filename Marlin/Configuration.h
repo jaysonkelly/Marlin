@@ -1114,7 +1114,7 @@
 // SD Card support is disabled by default. If your controller has an SD slot,
 // you must uncomment the following option or it won't work.
 //
-#define SDSUPPORT
+//#define SDSUPPORT
 
 //
 // SD CARD: SPI SPEED
@@ -1124,7 +1124,7 @@
 //
 //#define SPI_SPEED SPI_HALF_SPEED
 //#define SPI_SPEED SPI_QUARTER_SPEED
-#define SPI_SPEED SPI_EIGHTH_SPEED
+//#define SPI_SPEED SPI_EIGHTH_SPEED
 
 //
 // SD CARD: ENABLE CRC
@@ -1294,7 +1294,7 @@
 // RigidBot Panel V1.0
 // http://www.inventapart.com/
 //
-#define RIGIDBOT_PANEL
+//#define RIGIDBOT_PANEL
 
 //
 // BQ LCD Smart Controller shipped by
