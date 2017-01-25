@@ -1294,7 +1294,7 @@ KeepDrawing:
 
     /**
      * Step 3: Display "Homing XYZ" - Wait for homing to finish
-     */
+     
     void _lcd_level_bed_homing() {
       if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR(MSG_LEVEL_BED_HOMING), NULL);
       lcdDrawUpdate =
@@ -1308,7 +1308,19 @@ KeepDrawing:
       lcd_wait_for_homing();
       lcd_goto_screen(_lcd_level_bed_homing_done);
     }
-
+*/
+    void _lcd_level_bed_homing() {
+      if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR(MSG_LEVEL_BED_HOMING), NULL);
+      lcdDrawUpdate =
+        #if ENABLED(DOGLCD)
+          LCDVIEW_CALL_REDRAW_NEXT
+        #else
+          LCDVIEW_CALL_NO_REDRAW
+        #endif
+      ;
+      if (axis_homed[X_AXIS] && axis_homed[Y_AXIS] && axis_homed[Z_AXIS])
+        lcd_goto_screen(_lcd_level_bed_homing_done);
+    }
     /**
      * Step 2: Continue Bed Leveling...
      */
