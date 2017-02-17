@@ -847,11 +847,11 @@ void EncoderManager::report_status(AxisEnum axis) {
     //} else {
       //SERIAL_ECHO("Encoder not operational");
     }
+  }
 
-    if (!responded) {
-      SERIAL_ECHOLN("No encoder configured for given axis!");
-      responded = true;
-    }
+  if (!responded) {
+    SERIAL_ECHOLN("No encoder configured for given axis!");
+    responded = true;
   }
 }
 
