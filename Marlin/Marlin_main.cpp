@@ -7416,7 +7416,11 @@ inline void gcode_M907() {
     }
 
     if(axisSelected) {
-      i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      if(toggle) {
+        i2cEncoderManager.enable_error_correction(selectedAxis, !i2cEncoderManager.encoderArray[i2cEncoderManager.get_encoder_index_from_axis(selectedAxis)].get_error_correct_enabled());
+      } else {
+        i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      }
     } 
   }
 
