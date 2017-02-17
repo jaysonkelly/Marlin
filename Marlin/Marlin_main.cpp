@@ -7214,6 +7214,7 @@ inline void gcode_M907() {
         SERIAL_ECHO(": ");
         i2cEncoderManager.report_status(AxisEnum(i));
       }
+    }
   }
 
   //Performs an axis continuity test for a given encoder module / axis
