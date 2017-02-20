@@ -328,6 +328,8 @@ long I2cEncoder::get_raw_count() {
 
   byte index = 0;
 
+  encoderCount.val = 0x00;
+
   while (Wire.available()) {
     byte a = Wire.read();
     encoderCount.bval[index] = a;
