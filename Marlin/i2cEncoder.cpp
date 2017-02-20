@@ -39,6 +39,7 @@ void I2cEncoder::init(AxisEnum axis, byte address) {
   SERIAL_ECHO(axis_codes[get_axis()]);
   SERIAL_ECHO(" axis, address = ");
   SERIAL_ECHOLN((int) address);
+  position = get_position();
 }
 
 void I2cEncoder::update() {
@@ -48,6 +49,7 @@ void I2cEncoder::update() {
 
     bool moduleDetected;
 
+    position = get_position();
     //we don't want to stop things just because the encoder missed a message,
     //so we only care about responses that indicate bad magnetic strength
     bool signalGood = passes_test(false,moduleDetected);
@@ -60,7 +62,6 @@ void I2cEncoder::update() {
 
         //get latest position
         lastPosition = position;
-        position = get_position();
         unsigned long positionTime = millis();
 
         //only do error correction if setup and enabled
