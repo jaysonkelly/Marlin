@@ -323,7 +323,7 @@ long I2cEncoder::get_position() {
 long I2cEncoder::get_raw_count() {
   i2cLong encoderCount;
 
-  Wire.requestFrom((int)i2cAddress,4);
+  Wire.requestFrom((int)i2cAddress,3);
 
   byte index = 0;
 
@@ -332,6 +332,12 @@ long I2cEncoder::get_raw_count() {
     encoderCount.bval[index] = a;
     index += 1;
   }
+
+  //extract the magnetic strength
+  magneticStrength = (byte)(0x3 & (encoderCount.val >> 22);
+
+  //clear the magnetic strength bits, they're not part of the encoder position
+  encoderCount.val &= ~(3 << 22);
 
   if(get_inverted()) {
     return -encoderCount.val;
@@ -342,7 +348,7 @@ long I2cEncoder::get_raw_count() {
 }
 
 byte I2cEncoder::get_magnetic_strength() {
-
+    /*
     //Set module to report magnetic strength
     Wire.beginTransmission((int)i2cAddress);
     Wire.write(I2C_SET_REPORT_MODE);
@@ -363,6 +369,8 @@ byte I2cEncoder::get_magnetic_strength() {
     Wire.endTransmission();
 
     return reading;
+    */
+    return magneticStrength;
   }
 
 bool I2cEncoder::test_axis() {
