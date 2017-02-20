@@ -36,7 +36,7 @@ CardReader::CardReader() {
   sdpos = 0;
   workDirDepth = 0;
   file_subcall_ctr = 0;
-  memset(workDirParents, 0, sizeof(workDirParents));
+  ZERO(workDirParents);
 
   autostart_stilltocheck = true; //the SD start is delayed, because otherwise the serial cannot answer fast enough to make contact with the host software.
   autostart_index = 0;
@@ -81,7 +81,7 @@ void CardReader::lsDive(const char *prepend, SdFile parent, const char * const m
       createFilename(lfilename, p);
 
       // Allocate enough stack space for the full path to a folder, trailing slash, and nul
-      boolean prepend_is_empty = (prepend[0] == '\0');
+      bool prepend_is_empty = (prepend[0] == '\0');
       int len = (prepend_is_empty ? 1 : strlen(prepend)) + strlen(lfilename) + 1 + 1;
       char path[len];
 
@@ -113,7 +113,7 @@ void CardReader::lsDive(const char *prepend, SdFile parent, const char * const m
       if (pn0 == DIR_NAME_DELETED || pn0 == '.') continue;
       if (longFilename[0] == '.') continue;
 
-      if (!DIR_IS_FILE_OR_SUBDIR(&p)) continue;
+      if (!DIR_IS_FILE_OR_SUBDIR(&p) || (p.attributes & DIR_ATT_HIDDEN)) continue;
 
       filenameIsDir = DIR_IS_SUBDIR(&p);
 

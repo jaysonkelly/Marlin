@@ -33,6 +33,12 @@
   #define Z_MIN_PROBE_PIN  19    // Z-MAX pin J14 End Stops
 #endif
 
+//
+// MOSFET changes
+//
+//#define RAMPS_D10_PIN       9 // EXTRUDER 1
+//#define MOSFET_D_PIN       12 // EXTRUDER 2 or FAN
+
 #include "pins_RAMPS.h"
 
 //
@@ -81,11 +87,19 @@
 #define RAMPS_D10_PIN       9 // EXTRUDER 1
 #define MOSFET_D_PIN       12 // EXTRUDER 2 or FAN
 
+
 #undef  HEATER_BED_PIN
 #define HEATER_BED_PIN     10
 
 #undef  FAN_PIN
 #define FAN_PIN             8 // Same as RAMPS_13_EEF
+#if EXTRUDERS == 2
+  #undef FAN1_PIN
+  #define FAN1_PIN         11
+#else
+  #undef FAN1_PIN
+  #define FAN1_PIN         -1
+#endif
 
 //
 // Misc. Functions

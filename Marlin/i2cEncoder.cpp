@@ -50,13 +50,13 @@ void I2cEncoder::update() {
     bool moduleDetected;
 
     position = get_position();
+
     //we don't want to stop things just because the encoder missed a message,
     //so we only care about responses that indicate bad magnetic strength
     bool signalGood = passes_test(false,moduleDetected);
 
     //check encoder data is good
     if(signalGood) {
-
       //if data is historically good, proceed
       if(trusted) {
 
@@ -77,7 +77,8 @@ void I2cEncoder::update() {
           #endif
 
           //check error
-          long error = get_axis_error_steps(false);
+
+          long error = get_axis_error_steps(false); 
 
           //SERIAL_ECHO("Axis err*r steps: ");
           //SERIAL_ECHOLN(error);
@@ -93,8 +94,15 @@ void I2cEncoder::update() {
 
           switch(get_error_correct_method()) {
             case ECM_MICROSTEP: 
-              if(abs(error) > threshold * planner.axis_steps_per_mm[encoderAxis]) {
-                //SERIAL_ECHOLN(error);
+//SERIAL_ECHOLN("Microstep error correction mode"); //Verbose JDK
+              if(abs(error) > threshold * planner.axis_steps_per_mm[encoderAxis] && abs(error) < 100 * threshold * planner.axis_steps_per_mm[encoderAxis]) { //JDK added upper range for error correct
+SERIAL_ECHO("Correction ");   //Verbose JDK
+SERIAL_ECHO(axis_codes[get_axis()]);//Verbose JDK
+SERIAL_ECHOLN(" encoder.");    //Verbose JDK                
+SERIAL_ECHO("Detected: ");
+SERIAL_ECHO(error / planner.axis_steps_per_mm[encoderAxis]);
+SERIAL_ECHOLN("mm");
+
                 //SERIAL_ECHOLN(position);
                 //thermalManager.babystepsTodo[encoderAxis] -= STEPRATE * sgn(error);
                 thermalManager.babystepsTodo[encoderAxis] = -lround(error/2);
@@ -286,6 +294,7 @@ long I2cEncoder::get_axis_error_steps(bool report) {
   }
 
   if(report) {
+
     SERIAL_ECHO(axis_codes[encoderAxis]);
     SERIAL_ECHO(" Target: ");
     SERIAL_ECHOLN(target);
@@ -330,6 +339,7 @@ long I2cEncoder::get_raw_count() {
 
   encoderCount.val = 0x00;
 
+
   while (Wire.available()) {
     byte a = Wire.read();
     encoderCount.bval[index] = a;
@@ -352,6 +362,7 @@ long I2cEncoder::get_raw_count() {
 
 byte I2cEncoder::get_magnetic_strength() {
     /*
+
     //Set module to report magnetic strength
     Wire.beginTransmission((int)i2cAddress);
     Wire.write(I2C_SET_REPORT_MODE);
@@ -374,6 +385,7 @@ byte I2cEncoder::get_magnetic_strength() {
     return reading;
     */
     return magneticStrength;
+
   }
 
 bool I2cEncoder::test_axis() {
