@@ -130,6 +130,7 @@ class I2cEncoder {
         int errorCount = 0;
         unsigned long lastErrorCountTime = 0;
         int errorPrev = 0;
+        byte magneticStrength = I2C_MAG_SIG_BAD;
 
     public:
         void init(AxisEnum axis, byte address);

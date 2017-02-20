@@ -7200,15 +7200,21 @@ inline void gcode_M907() {
 
   //Checks and reports the status of a given encoder module
   inline void gcode_M861() {
-    AxisEnum selectedAxis;
-
-    for(int i = 0; i < NUM_AXIS; i++) {
+    bool reported = false;
+    LOOP_XYZ(i) {
       if (code_seen(axis_codes[i])) {
-        selectedAxis = AxisEnum(i);
+        i2cEncoderManager.report_status(AxisEnum(i));
+        reported = true;
+      }
+    }    
+    
+    if(!reported) {
+      LOOP_XYZ(i) {
+        SERIAL_ECHO(axis_codes[i]);
+        SERIAL_ECHO(": ");
+        i2cEncoderManager.report_status(AxisEnum(i));
       }
     }
-
-    i2cEncoderManager.report_status(selectedAxis);
   }
 
   //Performs an axis continuity test for a given encoder module / axis
@@ -7410,7 +7416,11 @@ inline void gcode_M907() {
     }
 
     if(axisSelected) {
-      i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      if(toggle) {
+        i2cEncoderManager.enable_error_correction(selectedAxis, !i2cEncoderManager.encoderArray[i2cEncoderManager.get_encoder_index_from_axis(selectedAxis)].get_error_correct_enabled());
+      } else {
+        i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      }
     } 
   }
 

@@ -39,6 +39,7 @@ void I2cEncoder::init(AxisEnum axis, byte address) {
   SERIAL_ECHO(axis_codes[get_axis()]);
   SERIAL_ECHO(" axis, address = ");
   SERIAL_ECHOLN((int) address);
+  position = get_position();
 }
 
 void I2cEncoder::update() {
@@ -48,6 +49,7 @@ void I2cEncoder::update() {
 
     bool moduleDetected;
 
+    position = get_position();
     //we don't want to stop things just because the encoder missed a message,
     //so we only care about responses that indicate bad magnetic strength
     bool signalGood = passes_test(false,moduleDetected);
@@ -60,7 +62,6 @@ void I2cEncoder::update() {
 
         //get latest position
         lastPosition = position;
-        position = get_position();
         unsigned long positionTime = millis();
 
         //only do error correction if setup and enabled
@@ -323,15 +324,23 @@ long I2cEncoder::get_position() {
 long I2cEncoder::get_raw_count() {
   i2cLong encoderCount;
 
-  Wire.requestFrom((int)i2cAddress,4);
+  Wire.requestFrom((int)i2cAddress,3);
 
   byte index = 0;
+
+  encoderCount.val = 0x00;
 
   while (Wire.available()) {
     byte a = Wire.read();
     encoderCount.bval[index] = a;
     index += 1;
   }
+
+  //extract the magnetic strength
+  magneticStrength = (byte)(0x3 & (encoderCount.val >> 22);
+
+  //clear the magnetic strength bits, they're not part of the encoder position
+  encoderCount.val &= ~(3 << 22);
 
   if(get_inverted()) {
     return -encoderCount.val;
@@ -342,7 +351,7 @@ long I2cEncoder::get_raw_count() {
 }
 
 byte I2cEncoder::get_magnetic_strength() {
-
+    /*
     //Set module to report magnetic strength
     Wire.beginTransmission((int)i2cAddress);
     Wire.write(I2C_SET_REPORT_MODE);
@@ -363,6 +372,8 @@ byte I2cEncoder::get_magnetic_strength() {
     Wire.endTransmission();
 
     return reading;
+    */
+    return magneticStrength;
   }
 
 bool I2cEncoder::test_axis() {
@@ -847,11 +858,11 @@ void EncoderManager::report_status(AxisEnum axis) {
     //} else {
       //SERIAL_ECHO("Encoder not operational");
     }
+  }
 
-    if (!responded) {
-      SERIAL_ECHOLN("No encoder configured for given axis!");
-      responded = true;
-    }
+  if (!responded) {
+    SERIAL_ECHOLN("No encoder configured for given axis!");
+    responded = true;
   }
 }
 
