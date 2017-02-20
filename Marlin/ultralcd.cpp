@@ -674,40 +674,7 @@ void kill_screen(const char* lcd_msg) {
   void lcd_main_menu() {
     START_MENU();
     MENU_BACK(MSG_WATCH);
-
-    //
-    // Debug Menu when certain options are enabled
-    //
-    #if HAS_DEBUG_MENU
-      MENU_ITEM(submenu, MSG_DEBUG_MENU, lcd_debug_menu);
-    #endif
-
-    //
-    // Switch case light on/off
-    //
-    #if ENABLED(MENU_ITEM_CASE_LIGHT)
-      if (case_light_on)
-        MENU_ITEM(function, MSG_LIGHTS_OFF, toggle_case_light);
-      else
-        MENU_ITEM(function, MSG_LIGHTS_ON, toggle_case_light);
-    #endif
-
-    #if ENABLED(BLTOUCH)
-      if (!endstops.z_probe_enabled && TEST_BLTOUCH())
-        MENU_ITEM(gcode, MSG_BLTOUCH_RESET, PSTR("M280 P" STRINGIFY(Z_ENDSTOP_SERVO_NR) " S" STRINGIFY(BLTOUCH_RESET)));
-    #endif
-
-    if (planner.movesplanned() || IS_SD_PRINTING) {
-      MENU_ITEM(submenu, MSG_TUNE, lcd_tune_menu);
-    }
-    else {
-      MENU_ITEM(submenu, MSG_PREPARE, lcd_prepare_menu);
-      #if ENABLED(DELTA_CALIBRATION_MENU)
-        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE, lcd_delta_calibrate_menu);
-      #endif
-    }
-    MENU_ITEM(submenu, MSG_CONTROL, lcd_control_menu);
-
+    
     #if ENABLED(SDSUPPORT)
       if (card.cardOK) {
         if (card.isFileOpen()) {
@@ -731,6 +698,40 @@ void kill_screen(const char* lcd_msg) {
         #endif
       }
     #endif //SDSUPPORT
+
+    if (planner.movesplanned() || IS_SD_PRINTING) {
+      MENU_ITEM(submenu, MSG_TUNE, lcd_tune_menu);
+    }
+    else {
+      MENU_ITEM(submenu, MSG_PREPARE, lcd_prepare_menu);
+      #if ENABLED(DELTA_CALIBRATION_MENU)
+        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE, lcd_delta_calibrate_menu);
+      #endif
+    }
+    MENU_ITEM(submenu, MSG_CONTROL, lcd_control_menu);
+
+    //
+    // Debug Menu when certain options are enabled
+    //
+    #if HAS_DEBUG_MENU
+      MENU_ITEM(submenu, MSG_DEBUG_MENU, lcd_debug_menu);
+    #endif
+
+    //
+    // Switch case light on/off
+    //
+    #if ENABLED(MENU_ITEM_CASE_LIGHT)
+      if (case_light_on)
+        MENU_ITEM(function, MSG_LIGHTS_OFF, toggle_case_light);
+      else
+        MENU_ITEM(function, MSG_LIGHTS_ON, toggle_case_light);
+    #endif
+
+    #if ENABLED(BLTOUCH)
+      if (!endstops.z_probe_enabled && TEST_BLTOUCH())
+        MENU_ITEM(gcode, MSG_BLTOUCH_RESET, PSTR("M280 P" STRINGIFY(Z_ENDSTOP_SERVO_NR) " S" STRINGIFY(BLTOUCH_RESET)));
+    #endif
+
 
     #if ENABLED(LCD_INFO_MENU)
       MENU_ITEM(submenu, MSG_INFO_MENU, lcd_info_menu);
@@ -850,6 +851,12 @@ void kill_screen(const char* lcd_msg) {
     // ^ Main
     //
     MENU_BACK(MSG_MAIN);
+    
+    //
+    //Home XY
+    //
+    //MENU_ITEM(gcode, "Home XY", PSTR("G28 X Y")); Currently this doesn't return to the correct z-height after homing
+    //we want this to pause the machine, raise z, home xy, return to previous position, lower z and resume
 
     //
     // Speed:
@@ -1269,14 +1276,26 @@ KeepDrawing:
 
     /**
      * Step 3: Display "Homing XYZ" - Wait for homing to finish
-     */
+     
     void _lcd_level_bed_homing() {
       if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR(MSG_LEVEL_BED_HOMING), NULL);
       lcdDrawUpdate = LCDVIEW_KEEP_REDRAWING;
       if (axis_homed[X_AXIS] && axis_homed[Y_AXIS] && axis_homed[Z_AXIS])
         lcd_goto_screen(_lcd_level_bed_homing_done);
     }
-
+*/
+    void _lcd_level_bed_homing() {
+      if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR(MSG_LEVEL_BED_HOMING), NULL);
+      lcdDrawUpdate =
+        #if ENABLED(DOGLCD)
+          LCDVIEW_CALL_REDRAW_NEXT
+        #else
+          LCDVIEW_CALL_NO_REDRAW
+        #endif
+      ;
+      if (axis_homed[X_AXIS] && axis_homed[Y_AXIS] && axis_homed[Z_AXIS])
+        lcd_goto_screen(_lcd_level_bed_homing_done);
+    }
     /**
      * Step 2: Continue Bed Leveling...
      */
@@ -1315,23 +1334,36 @@ KeepDrawing:
     MENU_BACK(MSG_MAIN);
 
     //
-    // Move Axis
+    // Preheat PLA
+    // Preheat ABS
     //
-    #if ENABLED(DELTA)
-      if (axis_homed[Z_AXIS])
+    #if TEMP_SENSOR_0 != 0
+      #if TEMP_SENSOR_1 != 0 || TEMP_SENSOR_2 != 0 || TEMP_SENSOR_3 != 0 || TEMP_SENSOR_BED != 0
+        MENU_ITEM(submenu, MSG_PREHEAT_1, lcd_preheat_material1_menu);
+        MENU_ITEM(submenu, MSG_PREHEAT_2, lcd_preheat_material2_menu);
+      #else
+        MENU_ITEM(function, MSG_PREHEAT_1, lcd_preheat_material1_hotend0);
+        MENU_ITEM(function, MSG_PREHEAT_2, lcd_preheat_material2_hotend0);
+      #endif
+      //
+      // Change filament
+      //
+      #if ENABLED(FILAMENT_CHANGE_FEATURE)
+        if (!thermalManager.tooColdToExtrude(active_extruder))
+          MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
+      #endif
     #endif
-        MENU_ITEM(submenu, MSG_MOVE_AXIS, lcd_move_menu);
 
     //
-    // Auto Home
+    // Cooldown
     //
-    MENU_ITEM(gcode, MSG_AUTO_HOME, PSTR("G28"));
-    #if ENABLED(INDIVIDUAL_AXIS_HOMING_MENU)
-      MENU_ITEM(gcode, MSG_AUTO_HOME_X, PSTR("G28 X"));
-      MENU_ITEM(gcode, MSG_AUTO_HOME_Y, PSTR("G28 Y"));
-      MENU_ITEM(gcode, MSG_AUTO_HOME_Z, PSTR("G28 Z"));
+    bool has_heat = false;
+    HOTEND_LOOP() if (thermalManager.target_temperature[HOTEND_INDEX]) { has_heat = true; }
+    #if HAS_TEMP_BED
+      if (thermalManager.target_temperature_bed) has_heat = true;
     #endif
-
+    if (has_heat) MENU_ITEM(function, MSG_COOLDOWN, lcd_cooldown);
+    
     //
     // Level Bed
     //
@@ -1344,49 +1376,42 @@ KeepDrawing:
     #endif
 
     //
+    // Move Axis
+    //
+    #if ENABLED(DELTA)
+      if (axis_homed[Z_AXIS])
+    #endif
+        MENU_ITEM(submenu, MSG_MOVE_AXIS, lcd_move_menu);
+
+    //
+    // Auto Home
+    //
+    #if ENABLED(INDIVIDUAL_AXIS_HOMING_MENU)
+      MENU_ITEM(gcode, "Home XY", PSTR("G28 X Y"));
+      //MENU_ITEM(gcode, MSG_AUTO_HOME_X, PSTR("G28 X"));
+      //MENU_ITEM(gcode, MSG_AUTO_HOME_Y, PSTR("G28 Y"));
+      //MENU_ITEM(gcode, MSG_AUTO_HOME_Z, PSTR("G28 Z"));
+    #endif
+    MENU_ITEM(gcode, MSG_AUTO_HOME, PSTR("G28"));
+
+    //
     // Set Home Offsets
     //
     MENU_ITEM(function, MSG_SET_HOME_OFFSETS, lcd_set_home_offsets);
     //MENU_ITEM(gcode, MSG_SET_ORIGIN, PSTR("G92 X0 Y0 Z0"));
-
+ 
     //
     // Disable Steppers
     //
-    MENU_ITEM(gcode, MSG_DISABLE_STEPPERS, PSTR("M84"));
-
-    //
-    // Preheat PLA
-    // Preheat ABS
-    //
-    #if TEMP_SENSOR_0 != 0
-
-      #if TEMP_SENSOR_1 != 0 || TEMP_SENSOR_2 != 0 || TEMP_SENSOR_3 != 0 || TEMP_SENSOR_BED != 0
-        MENU_ITEM(submenu, MSG_PREHEAT_1, lcd_preheat_material1_menu);
-        MENU_ITEM(submenu, MSG_PREHEAT_2, lcd_preheat_material2_menu);
-      #else
-        MENU_ITEM(function, MSG_PREHEAT_1, lcd_preheat_material1_hotend0);
-        MENU_ITEM(function, MSG_PREHEAT_2, lcd_preheat_material2_hotend0);
-      #endif
-
-      //
-      // Change filament
-      //
-      #if ENABLED(FILAMENT_CHANGE_FEATURE)
-        if (!thermalManager.tooColdToExtrude(active_extruder))
-          MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
-      #endif
-
-    #endif // TEMP_SENSOR_0 != 0
-
-    //
-    // Cooldown
-    //
+    MENU_ITEM(gcode, MSG_DISABLE_STEPPERS, PST
+    
     bool has_heat = false;
     HOTEND_LOOP() if (thermalManager.target_temperature[HOTEND_INDEX]) { has_heat = true; break; }
     #if HAS_TEMP_BED
       if (thermalManager.target_temperature_bed) has_heat = true;
     #endif
-    if (has_heat) MENU_ITEM(function, MSG_COOLDOWN, lcd_cooldown);
+    if (has_heat) MENU_ITEM(function, MSG_COOLDOWN, lcd_cooldown)
+    
 
     //
     // BLTouch Self-Test and Reset

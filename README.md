@@ -17,6 +17,14 @@ You can download earlier versions of Marlin on the [Releases page](https://githu
 The latest Release Candidate lives in the ["RC" branch](https://github.com/MarlinFirmware/Marlin/tree/RC). Bugs that we find in the current Release Candidate are patched in the ["RCBugFix" branch](https://github.com/MarlinFirmware/Marlin/tree/RCBugFix), so during beta testing this is where you can always find the latest code on its way towards release.
 
 ## Recent Changes
+- RB2
+  - Configured for Rigidbot2 not including the LCD Controller selection
+  - Tweaks to the LCD menus in an attempt to improve them for use with RIGID_PANEL controller
+- RB2 FUTURE PLANS  
+  - Add Jog functionality
+  - Original RB2 menus 
+  - Improved Pause Resume that moves the head up and away from the print
+
 - RCBugFix
   - Fixed broken MBL
   - M600 heater timeout option
