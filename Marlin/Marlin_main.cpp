@@ -28,6 +28,7 @@
  *  - https://github.com/simen/grbl/tree
  */
 
+
 /**
  * -----------------
  * G-Codes in Marlin
@@ -1527,7 +1528,7 @@ static void set_axis_is_at_home(AxisEnum axis) {
       SERIAL_EOL;
     }
   #endif
-            
+
   #if ENABLED(I2C_ENCODERS_ENABLED)
     i2cEncoderManager.homed(axis);
   #endif
@@ -4621,7 +4622,7 @@ inline void gcode_G92() {
           didXYZ = true;
           position_shift[i] += v - p; // Offset the coordinate space
           update_software_endstops((AxisEnum)i);
-                    
+
           #if ENABLED(I2C_ENCODERS_ENABLED)
             i2cEncoderManager.encoderArray[i2cEncoderManager.get_encoder_index_from_axis((AxisEnum)i)].set_axis_offset(position_shift[i]);
           #endif
@@ -7872,7 +7873,6 @@ inline void gcode_M355() {
     }
   }
 
-
   //Performs an automatic steps per mm calibration for a given encoder module / axis
   inline void gcode_M863() {
     AxisEnum selectedAxis;
@@ -8053,7 +8053,11 @@ inline void gcode_M355() {
     }
 
     if(axisSelected) {
-      i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      if(toggle) {
+        i2cEncoderManager.enable_error_correction(selectedAxis, !i2cEncoderManager.encoderArray[i2cEncoderManager.get_encoder_index_from_axis(selectedAxis)].get_error_correct_enabled());
+      } else {
+        i2cEncoderManager.enable_error_correction(selectedAxis, enable);
+      }
     } 
   }
 
@@ -9247,6 +9251,50 @@ void process_next_command() {
       case 355: // M355 Turn case lights on/off
         gcode_M355();
         break;
+
+      #if ENABLED(I2C_ENCODERS_ENABLED)
+
+        case 860: // M860 Report encoder module position
+          gcode_M860();
+          break;
+
+        case 861: // M351 Report encoder module status
+          gcode_M861();
+          break;
+
+        case 862: // M351 Report encoder module status
+          gcode_M862();
+          break;
+
+        case 863: // M351 Report encoder module status
+          gcode_M863();
+          break;
+
+        case 864: // M351 Report encoder module status
+          gcode_M864();
+          break;
+
+        case 865: // M351 Report encoder module status
+          gcode_M865();
+          break;
+
+        case 866: // M351 Report encoder module status
+          gcode_M866();
+          break;
+
+        case 867: // M351 Report encoder module status
+          gcode_M867();
+          break;
+
+        case 868: // M351 Report encoder module status
+          gcode_M868();
+          break;
+
+        case 869: // M351 Report axis error
+          gcode_M869();
+          break;
+
+      #endif // I2C_ENCODERS_ENABLED
 
       case 999: // M999: Restart after being Stopped
         gcode_M999();
@@ -10720,7 +10768,7 @@ void idle(
   #if HAS_BUZZER && DISABLED(LCD_USE_I2C_BUZZER)
     buzzer.tick();
   #endif
-            
+
   #if ENABLED(I2C_ENCODERS_ENABLED)
     i2cEncoderManager.update();
   #endif
@@ -10904,6 +10952,7 @@ void setup() {
   #if PIN_EXISTS(STAT_LED_BLUE)
     OUT_WRITE(STAT_LED_BLUE_PIN, LOW); // turn it off
   #endif
+
 
   #if ENABLED(RGB_LED)
     pinMode(RGB_LED_R_PIN, OUTPUT);

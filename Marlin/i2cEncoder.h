@@ -66,7 +66,8 @@
 #define I2C_ENCODER_PRESET_ADDR_Z 32
 #define I2C_ENCODER_PRESET_ADDR_E 33
 
-#define I2C_ENCODER_DEF_AXIS X_AXIS 
+#define I2C_ENCODER_DEF_AXIS X_AXIS
+
 #define I2C_ENCODER_DEF_ADDR I2C_ENCODER_PRESET_ADDR_X
 
 //Error event counter. Tracks how many times there is an error surpassing a certain threshold
@@ -130,6 +131,8 @@ class I2cEncoder {
         int errorCount = 0;
         unsigned long lastErrorCountTime = 0;
         int errorPrev = 0;
+        byte magneticStrength = I2C_MAG_SIG_BAD;
+
 
     public:
         void init(AxisEnum axis, byte address);

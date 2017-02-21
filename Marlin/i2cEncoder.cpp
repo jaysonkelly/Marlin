@@ -39,21 +39,17 @@ void I2cEncoder::init(AxisEnum axis, byte address) {
   SERIAL_ECHO(axis_codes[get_axis()]);
   SERIAL_ECHO(" axis, address = ");
   SERIAL_ECHOLN((int) address);
+  position = get_position();
 }
 
 void I2cEncoder::update() {
-//  delay(500);
-//SERIAL_ECHO("Update event for ");   //Verbose JDK
-//SERIAL_ECHO(axis_codes[get_axis()]);//Verbose JDK
-//SERIAL_ECHOLN(" axis encoder.");    //Verbose JDK
+
   //check encoder is set up and active
-  
-//SERIAL_ECHO(initialised);
-//SERIAL_ECHO(homed);
-//SERIAL_ECHOLN(active);
   if(initialised && homed && active) {
-//SERIAL_ECHOLN("initialised && homed && active"); //Verbose JDK
+
     bool moduleDetected;
+
+    position = get_position();
 
     //we don't want to stop things just because the encoder missed a message,
     //so we only care about responses that indicate bad magnetic strength
@@ -61,18 +57,16 @@ void I2cEncoder::update() {
 
     //check encoder data is good
     if(signalGood) {
-//SERIAL_ECHOLN("signal good"); //Verbose JDK
       //if data is historically good, proceed
       if(trusted) {
-//SERIAL_ECHOLN("trusted");   //Verbose JDK
+
         //get latest position
         lastPosition = position;
-        position = get_position();
         unsigned long positionTime = millis();
 
         //only do error correction if setup and enabled
         if(get_error_correct_method() != ECM_NONE && get_error_correct_enabled()) {
-//SERIAL_ECHOLN("error correction is enabled"); //Verbose JDK
+
           #if defined(ERROR_THRESHOLD_PROPORTIONAL_SPEED)
             unsigned long distance = abs(position - lastPosition);
             unsigned long deltaTime = positionTime - lastPositionTime;
@@ -83,7 +77,8 @@ void I2cEncoder::update() {
           #endif
 
           //check error
-          long error = get_axis_error_steps(false); //Verbose (was false) JDK
+
+          long error = get_axis_error_steps(false); 
 
           //SERIAL_ECHO("Axis err*r steps: ");
           //SERIAL_ECHOLN(error);
@@ -107,6 +102,7 @@ SERIAL_ECHOLN(" encoder.");    //Verbose JDK
 SERIAL_ECHO("Detected: ");
 SERIAL_ECHO(error / planner.axis_steps_per_mm[encoderAxis]);
 SERIAL_ECHOLN("mm");
+
                 //SERIAL_ECHOLN(position);
                 //thermalManager.babystepsTodo[encoderAxis] -= STEPRATE * sgn(error);
                 thermalManager.babystepsTodo[encoderAxis] = -lround(error/2);
@@ -298,7 +294,7 @@ long I2cEncoder::get_axis_error_steps(bool report) {
   }
 
   if(report) {
-    SERIAL_ECHOLN(encoderAxis);
+
     SERIAL_ECHO(axis_codes[encoderAxis]);
     SERIAL_ECHO(" Target: ");
     SERIAL_ECHOLN(target);
@@ -337,15 +333,24 @@ long I2cEncoder::get_position() {
 long I2cEncoder::get_raw_count() {
   i2cLong encoderCount;
 
-  Wire.requestFrom((int)i2cAddress,4);
+  Wire.requestFrom((int)i2cAddress,3);
 
   byte index = 0;
+
+  encoderCount.val = 0x00;
+
 
   while (Wire.available()) {
     byte a = Wire.read();
     encoderCount.bval[index] = a;
     index += 1;
   }
+
+  //extract the magnetic strength
+  magneticStrength = (byte)(0x3 & (encoderCount.val >> 22);
+
+  //clear the magnetic strength bits, they're not part of the encoder position
+  encoderCount.val &= ~(3 << 22);
 
   if(get_inverted()) {
     return -encoderCount.val;
@@ -356,6 +361,7 @@ long I2cEncoder::get_raw_count() {
 }
 
 byte I2cEncoder::get_magnetic_strength() {
+    /*
 
     //Set module to report magnetic strength
     Wire.beginTransmission((int)i2cAddress);
@@ -377,6 +383,9 @@ byte I2cEncoder::get_magnetic_strength() {
     Wire.endTransmission();
 
     return reading;
+    */
+    return magneticStrength;
+
   }
 
 bool I2cEncoder::test_axis() {
