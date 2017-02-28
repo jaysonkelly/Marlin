@@ -337,10 +337,16 @@ long I2cEncoder::get_raw_count() {
   }
 
   //extract the magnetic strength
-  magneticStrength = (byte)(0x3 & (encoderCount.val >> 22);
+  magneticStrength = (byte)(0x3 & (encoderCount.val >> 22));
 
-  //clear the magnetic strength bits, they're not part of the encoder position
-  encoderCount.val &= ~(3 << 22);
+  //Clear the sign bit, just in case
+  encoderCount.val &= ~((long)1 << 31);
+
+  //extract the packed sign bit from bit 21 to bit 31
+  encoderCount.val |= ((((long)1<<21) & encoderCount.val) << 10);
+
+  //clear the packed bits, they're not part of the encoder position long
+  encoderCount.val &= ~((long)7 << 21);
 
   if(get_inverted()) {
     return -encoderCount.val;
