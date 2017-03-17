@@ -122,6 +122,7 @@
  * M119 - Report endstops status.
  * M120 - Enable endstops detection.
  * M121 - Disable endstops detection.
+ * M125 - Save current position and move to filament change position. (Requires MOVE_AWAY_ON_PAUSE)
  * M126 - Solenoid Air Valve Open. (Requires BARICUDA)
  * M127 - Solenoid Air Valve Closed. (Requires BARICUDA)
  * M128 - EtoP Open. (Requires BARICUDA)
@@ -150,7 +151,7 @@
  * M208 - Set Recover (unretract) Additional (!) Length: S<length> and Feedrate: F<units/min>. (Requires FWRETRACT)
  * M209 - Turn Automatic Retract Detection on/off: S<0|1> (For slicers that don't support G10/11). (Requires FWRETRACT)
           Every normal extrude-only move will be classified as retract depending on the direction.
- * M211 - Enable, Disable, and/or Report software endstops: S<0|1>
+ * M211 - Enable, Disable, and/or Report software endstops: S<0|1> (Requires MIN_SOFTWARE_ENDSTOPS or MAX_SOFTWARE_ENDSTOPS)
  * M218 - Set a tool offset: "M218 T<index> X<offset> Y<offset>". (Requires 2 or more extruders)
  * M220 - Set Feedrate Percentage: "M220 S<percent>" (i.e., "FR" on the LCD)
  * M221 - Set Flow Percentage: "M221 S<percent>"
@@ -199,13 +200,11 @@
  * M350 - Set microstepping mode. (Requires digital microstepping pins.)
  * M351 - Toggle MS1 MS2 pins directly. (Requires digital microstepping pins.)
  *
- * ************ SCARA Specific - This can change to suit future G-code regulations
  * M360 - SCARA calibration: Move to cal-position ThetaA (0 deg calibration)
  * M361 - SCARA calibration: Move to cal-position ThetaB (90 deg calibration - steps per degree)
  * M362 - SCARA calibration: Move to cal-position PsiA (0 deg calibration)
  * M363 - SCARA calibration: Move to cal-position PsiB (90 deg calibration - steps per degree)
  * M364 - SCARA calibration: Move to cal-position PSIC (90 deg to Theta calibration position)
- * ************* SCARA End ***************
  *
  * ************ Custom codes - This can change to suit future G-code regulations
  * M100 - Watch Free Memory (For Debugging). (Requires M100_FREE_MEMORY_WATCHER)
@@ -4644,6 +4643,45 @@ inline void gcode_M17() {
   enable_all_steppers();
 }
 
+#if IS_KINEMATIC
+  #define RUNPLAN(RATE_MM_S) planner.buffer_line_kinematic(destination, RATE_MM_S, active_extruder)
+#else
+  #define RUNPLAN(RATE_MM_S) line_to_destination(RATE_MM_S)
+#endif
+
+#if ENABLED(MOVE_AWAY_ON_PAUSE)
+  float resume_position[XYZE];
+  bool job_running = false;
+
+  inline void move_back_on_resume() {
+    if (!job_running) return;
+    job_running = false;
+
+    // Set extruder to saved position
+    destination[E_AXIS] = current_position[E_AXIS] = resume_position[E_AXIS];
+    planner.set_e_position_mm(current_position[E_AXIS]);
+
+    #if IS_KINEMATIC
+      // Move XYZ to starting position
+      planner.buffer_line_kinematic(lastpos, FILAMENT_CHANGE_XY_FEEDRATE, active_extruder);
+    #else
+      // Move XY to starting position, then Z
+      destination[X_AXIS] = resume_position[X_AXIS];
+      destination[Y_AXIS] = resume_position[Y_AXIS];
+      RUNPLAN(FILAMENT_CHANGE_XY_FEEDRATE);
+      destination[Z_AXIS] = resume_position[Z_AXIS];
+      RUNPLAN(FILAMENT_CHANGE_Z_FEEDRATE);
+    #endif
+    stepper.synchronize();
+
+    #if ENABLED(FILAMENT_RUNOUT_SENSOR)
+      filament_ran_out = false;
+    #endif
+    set_current_to_destination();
+  }
+
+#endif // MOVE_AWAY_ON_PAUSE
+
 #if ENABLED(SDSUPPORT)
 
   /**
@@ -4671,9 +4709,13 @@ inline void gcode_M17() {
   inline void gcode_M23() { card.openFile(current_command_args, true); }
 
   /**
-   * M24: Start SD Print
+   * M24: Start or Resume SD Print
    */
   inline void gcode_M24() {
+    #if ENABLED(MOVE_AWAY_ON_PAUSE)
+      move_back_on_resume();
+    #endif
+
     card.startFileprint();
     print_job_timer.start();
   }
@@ -4681,7 +4723,14 @@ inline void gcode_M17() {
   /**
    * M25: Pause SD Print
    */
-  inline void gcode_M25() { card.pauseSDPrint(); }
+  inline void gcode_M25() {
+    card.pauseSDPrint();
+    print_job_timer.pause();
+
+    #if ENABLED(MOVE_AWAY_ON_PAUSE)
+      enqueue_and_echo_commands_P(PSTR("M125")); // Must be enqueued with pauseSDPrint set to be last in the buffer
+    #endif
+  }
 
   /**
    * M26: Set SD Card file index
@@ -6061,6 +6110,93 @@ inline void gcode_M120() { endstops.enable_globally(true); }
  */
 inline void gcode_M121() { endstops.enable_globally(false); }
 
+#if ENABLED(MOVE_AWAY_ON_PAUSE)
+
+  /**
+   * M125: Store current position and move to filament change position.
+   *       Called on pause to prevent material leaking onto the object.
+   *
+   *    L = override retract length
+   *    X = override X
+   *    Y = override Y
+   *    Z = override Z raise
+   */
+  inline void gcode_M125() {
+    // there are blocks after this one, or sd printing
+    job_running = planner.blocks_queued()
+      #if ENABLED(SDSUPPORT)
+        || card.isFileOpen()
+      #endif
+    ;
+
+    // M125 can be used to pause a print too
+    if (job_running) {
+      #if ENABLED(SDSUPPORT)
+        card.pauseSDPrint();
+      #endif
+      print_job_timer.pause();
+    }
+
+    // Save current position
+    COPY(resume_position, current_position);
+
+    set_destination_to_current();
+
+    // Initial retract before move to filament change position
+    destination[E_AXIS] += code_seen('L') ? code_value_axis_units(E_AXIS) : 0
+      #if defined(FILAMENT_CHANGE_RETRACT_LENGTH) && FILAMENT_CHANGE_RETRACT_LENGTH > 0
+        - (FILAMENT_CHANGE_RETRACT_LENGTH)
+      #endif
+    ;
+    RUNPLAN(FILAMENT_CHANGE_RETRACT_FEEDRATE);
+
+    // Lift Z axis
+    const float z_lift = code_seen('Z') ? code_value_axis_units(Z_AXIS) :
+      #if defined(FILAMENT_CHANGE_Z_ADD) && FILAMENT_CHANGE_Z_ADD > 0
+        FILAMENT_CHANGE_Z_ADD
+      #else
+        0
+      #endif
+    ;
+    if (z_lift > 0) {
+      destination[Z_AXIS] += z_lift;
+      NOMORE(destination[Z_AXIS], Z_MAX_POS);
+      RUNPLAN(FILAMENT_CHANGE_Z_FEEDRATE);
+    }
+
+    // Move XY axes to filament change position or given position
+    destination[X_AXIS] = code_seen('X') ? code_value_axis_units(X_AXIS) : 0
+      #ifdef FILAMENT_CHANGE_X_POS
+        + FILAMENT_CHANGE_X_POS
+      #endif
+    ;
+    destination[Y_AXIS] = code_seen('Y') ? code_value_axis_units(Y_AXIS) : 0
+      #ifdef FILAMENT_CHANGE_Y_POS
+        + FILAMENT_CHANGE_Y_POS
+      #endif
+    ;
+    clamp_to_software_endstops(destination);
+    RUNPLAN(FILAMENT_CHANGE_XY_FEEDRATE);
+    stepper.synchronize();
+
+    disable_e_steppers();
+
+    set_current_to_destination();
+
+    #if DISABLED(SDSUPPORT)
+      if (job_running) {
+        wait_for_user = true;
+        KEEPALIVE_STATE(PAUSED_FOR_USER);
+        while (wait_for_user) idle();
+        KEEPALIVE_STATE(IN_HANDLER);
+        move_back_on_resume();
+        print_job_timer.start();
+      }
+    #endif
+  }
+
+#endif // MOVE_AWAY_ON_PAUSE
+
 #if ENABLED(BLINKM) || ENABLED(RGB_LED)
 
   void set_led_color(const uint8_t r, const uint8_t g, const uint8_t b) {
@@ -7228,25 +7364,18 @@ inline void gcode_M503() {
     busy_doing_M600 = true;  // Stepper Motors can't timeout when this is set
 
     // Pause the print job timer
-    bool job_running = print_job_timer.isRunning();
+    const bool job_running = print_job_timer.isRunning();
+
     print_job_timer.pause();
 
     // Show initial message and wait for synchronize steppers
     lcd_filament_change_show_message(FILAMENT_CHANGE_MESSAGE_INIT);
     stepper.synchronize();
 
-    float lastpos[NUM_AXIS];
-
     // Save current position of all axes
-    LOOP_XYZE(i)
-      lastpos[i] = destination[i] = current_position[i];
-
-    // Define runplan for move axes
-    #if IS_KINEMATIC
-      #define RUNPLAN(RATE_MM_S) planner.buffer_line_kinematic(destination, RATE_MM_S, active_extruder);
-    #else
-      #define RUNPLAN(RATE_MM_S) line_to_destination(RATE_MM_S);
-    #endif
+    float lastpos[XYZE];
+    COPY(lastpos, current_position);
+    set_destination_to_current();
 
     // Initial retract before move to filament change position
     destination[E_AXIS] += code_seen('E') ? code_value_axis_units(E_AXIS) : 0
@@ -8510,6 +8639,11 @@ void process_next_command() {
           gcode_M107();
           break;
       #endif // FAN_COUNT > 0
+
+      #if ENABLED(MOVE_AWAY_ON_PAUSE)
+        case 125: // M125: Store current position and move to filament change position
+          gcode_M125(); break;
+      #endif
 
       #if ENABLED(BARICUDA)
         // PWM for HEATER_1_PIN
