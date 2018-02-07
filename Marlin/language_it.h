@@ -24,7 +24,7 @@
  * Italian
  *
  * LCD Menu Messages
- * See also https://github.com/MarlinFirmware/Marlin/wiki/LCD-Language
+ * See also http://marlinfw.org/docs/development/lcd_language.html
  *
  */
 #ifndef LANGUAGE_IT_H
@@ -56,17 +56,17 @@
 #define MSG_HOME_OFFSETS_APPLIED            _UxGT("Offset applicato")
 #define MSG_SET_ORIGIN                      _UxGT("Imposta Origine")
 #define MSG_PREHEAT_1                       _UxGT("Preriscalda PLA")
-#define MSG_PREHEAT_1_N                     MSG_PREHEAT_1 _UxGT(" ")
-#define MSG_PREHEAT_1_ALL                   MSG_PREHEAT_1 _UxGT(" Tutto")
-#define MSG_PREHEAT_1_END                   MSG_PREHEAT_1 _UxGT(" Ugello")
-#define MSG_PREHEAT_1_BEDONLY               MSG_PREHEAT_1 _UxGT(" Piatto")
-#define MSG_PREHEAT_1_SETTINGS              MSG_PREHEAT_1 _UxGT(" conf")
+#define MSG_PREHEAT_1_N                     _UxGT("Prerisc.PLA ")
+#define MSG_PREHEAT_1_ALL                   MSG_PREHEAT_1_N _UxGT("Tutto")
+#define MSG_PREHEAT_1_END                   MSG_PREHEAT_1_N _UxGT("Ugello")
+#define MSG_PREHEAT_1_BEDONLY               MSG_PREHEAT_1_N _UxGT("Piatto")
+#define MSG_PREHEAT_1_SETTINGS              MSG_PREHEAT_1_N _UxGT("conf")
 #define MSG_PREHEAT_2                       _UxGT("Preriscalda ABS")
-#define MSG_PREHEAT_2_N                     MSG_PREHEAT_2 _UxGT(" ")
-#define MSG_PREHEAT_2_ALL                   MSG_PREHEAT_2 _UxGT(" Tutto")
-#define MSG_PREHEAT_2_END                   MSG_PREHEAT_2 _UxGT(" Ugello")
-#define MSG_PREHEAT_2_BEDONLY               MSG_PREHEAT_2 _UxGT(" Piatto")
-#define MSG_PREHEAT_2_SETTINGS              MSG_PREHEAT_2 _UxGT(" conf")
+#define MSG_PREHEAT_2_N                     _UxGT("Prerisc.ABS ")
+#define MSG_PREHEAT_2_ALL                   MSG_PREHEAT_2_N _UxGT("Tutto")
+#define MSG_PREHEAT_2_END                   MSG_PREHEAT_2_N _UxGT("Ugello")
+#define MSG_PREHEAT_2_BEDONLY               MSG_PREHEAT_2_N _UxGT("Piatto")
+#define MSG_PREHEAT_2_SETTINGS              MSG_PREHEAT_2_N _UxGT("conf")
 #define MSG_COOLDOWN                        _UxGT("Raffredda")
 #define MSG_SWITCH_PS_ON                    _UxGT("Accendi aliment.")
 #define MSG_SWITCH_PS_OFF                   _UxGT("Spegni aliment.")
@@ -166,9 +166,15 @@
 #define MSG_SELECT                          _UxGT("Seleziona")
 #define MSG_ACC                             _UxGT("Accel")
 #define MSG_JERK                            _UxGT("Jerk")
-#define MSG_VX_JERK                         _UxGT("Vx-jerk")
-#define MSG_VY_JERK                         _UxGT("Vy-jerk")
-#define MSG_VZ_JERK                         _UxGT("Vz-jerk")
+#if IS_KINEMATIC
+  #define MSG_VA_JERK                       _UxGT("Va-jerk")
+  #define MSG_VB_JERK                       _UxGT("Vb-jerk")
+  #define MSG_VC_JERK                       _UxGT("Vc-jerk")
+#else
+  #define MSG_VA_JERK                       _UxGT("Vx-jerk")
+  #define MSG_VB_JERK                       _UxGT("Vy-jerk")
+  #define MSG_VC_JERK                       _UxGT("Vz-jerk")
+#endif
 #define MSG_VE_JERK                         _UxGT("Ve-jerk")
 #define MSG_VELOCITY                        _UxGT("Velocità")
 #define MSG_VMAX                            _UxGT("Vmax ")
@@ -179,9 +185,15 @@
 #define MSG_A_RETRACT                       _UxGT("A-retract")
 #define MSG_A_TRAVEL                        _UxGT("A-Spostamento")
 #define MSG_STEPS_PER_MM                    _UxGT("Passi/mm")
-#define MSG_XSTEPS                          _UxGT("Xpassi/mm")
-#define MSG_YSTEPS                          _UxGT("Ypassi/mm")
-#define MSG_ZSTEPS                          _UxGT("Zpassi/mm")
+#if IS_KINEMATIC
+  #define MSG_ASTEPS                        _UxGT("Apassi/mm")
+  #define MSG_BSTEPS                        _UxGT("Bpassi/mm")
+  #define MSG_CSTEPS                        _UxGT("Cpassi/mm")
+#else
+  #define MSG_ASTEPS                        _UxGT("Xpassi/mm")
+  #define MSG_BSTEPS                        _UxGT("Ypassi/mm")
+  #define MSG_CSTEPS                        _UxGT("Zpassi/mm")
+#endif
 #define MSG_ESTEPS                          _UxGT("Epassi/mm")
 #define MSG_E1STEPS                         _UxGT("E1passi/mm")
 #define MSG_E2STEPS                         _UxGT("E2passi/mm")
@@ -301,11 +313,9 @@
 #define MSG_DAC_PERCENT                     _UxGT("Driver %")
 #define MSG_DAC_EEPROM_WRITE                _UxGT("Scrivi DAC EEPROM")
 
-#define MSG_FILAMENT_CHANGE_HEADER          _UxGT("STAMPA IN PAUSA")
+#define MSG_FILAMENT_CHANGE_HEADER_PAUSE    _UxGT("STAMPA IN PAUSA")
 #define MSG_FILAMENT_CHANGE_OPTION_HEADER   _UxGT("OPZIONI:")
-#define MSG_FILAMENT_CHANGE_OPTION_EXTRUDE  _UxGT("Estrudi ancora")
 #define MSG_FILAMENT_CHANGE_OPTION_RESUME   _UxGT("Riprendi stampa")
-#define MSG_FILAMENT_CHANGE_MINTEMP         _UxGT("Temp minima è ")
 #define MSG_FILAMENT_CHANGE_NOZZLE          _UxGT("  Ugello: ")
 
 #if LCD_HEIGHT >= 4
@@ -326,9 +336,6 @@
   #define MSG_FILAMENT_CHANGE_LOAD_1        _UxGT("Attendere")
   #define MSG_FILAMENT_CHANGE_LOAD_2        _UxGT("il caricamento")
   #define MSG_FILAMENT_CHANGE_LOAD_3        _UxGT("del filamento")
-  #define MSG_FILAMENT_CHANGE_EXTRUDE_1     _UxGT("Attendere")
-  #define MSG_FILAMENT_CHANGE_EXTRUDE_2     _UxGT("l'estrusione")
-  #define MSG_FILAMENT_CHANGE_EXTRUDE_3     _UxGT("del filamento")
   #define MSG_FILAMENT_CHANGE_RESUME_1      _UxGT("Attendere")
   #define MSG_FILAMENT_CHANGE_RESUME_2      _UxGT("la ripresa")
   #define MSG_FILAMENT_CHANGE_RESUME_3      _UxGT("della stampa")
@@ -339,7 +346,6 @@
   #define MSG_FILAMENT_CHANGE_INSERT_1      _UxGT("Inserisci e premi")
   #define MSG_FILAMENT_CHANGE_HEATING_1     _UxGT("Riscaldamento...")
   #define MSG_FILAMENT_CHANGE_LOAD_1        _UxGT("Caricamento...")
-  #define MSG_FILAMENT_CHANGE_EXTRUDE_1     _UxGT("Estrusione...")
   #define MSG_FILAMENT_CHANGE_RESUME_1      _UxGT("Ripresa...")
 #endif // LCD_HEIGHT < 4
 
